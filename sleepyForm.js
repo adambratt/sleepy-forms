@@ -126,6 +126,14 @@
 
       };
 
+      /********************** Initialization ************************/
+
+      // Use form error target if supplied with proper CSS attribute
+      var formErrorTarget = self.find('[data-form-target="error"]');
+      if (formErrorTarget.length) {
+        settings.formErrorTarget = formErrorTarget[0];
+      }
+
       // Check to see if we were passed in a function
       if (typeof(options) === 'function') {
         settings.success = options;
@@ -253,7 +261,7 @@
          * return {obj} or false
          */
         try {
-          var obj = $.parseJSON(jqXHR.responseText);
+          var obj = $.parseJSON(jsonString);
         } catch (e) {
           return false;
         }
@@ -299,9 +307,11 @@
 
             // See if this is just a normal HTTP error (will have JSON)
             var errors = getJSONObject(jqXHR.responseText);
+
             if (errors !== false) {
               errorsCallback(errors);
               settings.afterError.apply(self, [statusText, 0, jqXHR]);
+              return;
             }
 
             // Something else is going on, this needs more handling
