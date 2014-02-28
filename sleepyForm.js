@@ -1,3 +1,12 @@
+/*
+ *  sleepyForm.js
+ *  Author: Adam Bratt
+ *  Date: February 28, 2014
+ *  Description:
+ *      Sleepy Forms provides an easy way to work with restFul forms.
+ *
+ */
+
 // Setup jQuery Extenders
 
 (function($){
@@ -117,9 +126,13 @@
 
       };
 
-      // Overwrite settings with supplied options
-      $.extend(settings, options);
-
+      // Check to see if we were passed in a function
+      if (typeof(options) === 'function') {
+        settings.success = options;
+      } else {
+        // Overwrite settings with supplied options
+        $.extend(settings, options);
+      }
 
       /******************** Built-in Handlers **********************/
 
@@ -145,7 +158,7 @@
         // Loop through custom fieldHandlers to add in data for custom fields
         $.each(settings.fieldHandlers, function (k, v) {
           if (v.data) {
-            dataObj[k] = v.data();
+            dataObj[k] = v.data.apply(self);
           }
         });
 
@@ -153,7 +166,7 @@
         $.extend(dataObj, settings.data);
 
         // Run through custom prepareData function
-        dataObj = settings.prepareData(dataObj);
+        dataObj = settings.prepareData.apply(self, [dataObj]);
 
         return dataObj;
       };
@@ -171,17 +184,18 @@
         }
 
         // Clear form errors
-        settings.clearFormErrors();
+        settings.clearFormErrors.apply(self);
+
         self.find('[name]').each( function () {
           var name = $(this).attr('name');
           if (settings.fieldHandlers[name] && settings.fieldHandlers[name].hasOwnProperty('clear')) {
-            settings.fieldHandlers[name].clear()
+            settings.fieldHandlers[name].clear.apply(self)
           } else {
-            settings.clearFieldErrors(name);
+            settings.clearFieldErrors.apply(self, [name]);
           }
         });
 
-        settings.beforeSubmit();
+        settings.beforeSubmit.apply(self);
 
       };
 
@@ -200,7 +214,7 @@
           }, 200);
         }
 
-        settings.afterSubmit();
+        settings.afterSubmit.apply(self);
 
       };
 
@@ -215,16 +229,16 @@
 
           // For form-level errors (not field) we use __all__ like Django Forms do
           if (k === '__all__') {
-            settings.renderFormErrors(v);
+            settings.renderFormErrors.apply(self, [v]);
             return;
           }
 
           // Check to see if custom error handler exists
           if (settings.fieldHandlers[k] && settings.fieldHandlers[k].error) {
-            settings.fieldHandlers[k].error(v);
+            settings.fieldHandlers[k].error.apply(self, [v]);
           } else {
             // Use default error renderer
-            settings.renderFieldErrors(k, v);
+            settings.renderFieldErrors.apply(self, [k, v]);
           }
 
         });
@@ -258,7 +272,7 @@
         e.stopPropagation();
 
         // Get form data
-        var data = settings.serializeData(getFormData());
+        var data = settings.serializeData.apply(self, [getFormData()]);
 
         // Call pre-submit handler
         beforeSubmitCallback();
@@ -275,7 +289,7 @@
 
             // Call post-submit handler
             afterSubmitCallback();
-            settings.success(resp);
+            settings.success.apply(self, [resp]);
 
           },
           error: function (jqXHR, statusText) {
@@ -287,14 +301,14 @@
             var errors = getJSONObject(jqXHR.responseText);
             if (errors !== false) {
               errorsCallback(errors);
-              settings.afterError(statusText, 0, jqXHR);
+              settings.afterError.apply(self, [statusText, 0, jqXHR]);
             }
 
             // Something else is going on, this needs more handling
             if (jqXHR.status === 0) {
               // Not connected to the internet
               errorsCallback({'__all__': ['Internet connection Lost']});
-              settings.afterError(statusText, 1, jqXHR);
+              settings.afterError.apply(self, [statusText, 1, jqXHR]);
 
             } else {
               switch (statusText) {
@@ -303,7 +317,7 @@
                 case 'abort':       // Ajax request aborted
                 default:            // Uncaught error
                   errorsCallback({'__all__': [statusText]});
-                  settings.afterError(statusText, 2, jqXHR);
+                  settings.afterError.apply(self, [statusText, 2, jqXHR]);
                   break;
               }
             }
